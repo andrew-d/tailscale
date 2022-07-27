@@ -269,8 +269,9 @@ func (lc *LocalClient) Profile(ctx context.Context, pprofType string, sec int) (
 }
 
 // BugReport logs and returns a log marker that can be shared by the user with support.
-func (lc *LocalClient) BugReport(ctx context.Context, note string) (string, error) {
-	body, err := lc.send(ctx, "POST", "/localapi/v0/bugreport?note="+url.QueryEscape(note), 200, nil)
+func (lc *LocalClient) BugReport(ctx context.Context, note string, diagnose bool) (string, error) {
+	uri := fmt.Sprintf("/localapi/v0/bugreport?note=%s&diagnose=%v", url.QueryEscape(note), diagnose)
+	body, err := lc.send(ctx, "POST", uri, 200, nil)
 	if err != nil {
 		return "", err
 	}
