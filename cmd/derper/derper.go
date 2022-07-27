@@ -181,6 +181,7 @@ func main() {
 	derpHandler = addWebSocketSupport(s, derpHandler)
 	mux.Handle("/derp", derpHandler)
 	mux.HandleFunc("/derp/probe", probeHandler)
+	mux.HandleFunc("/generate_204", generate204Handler)
 	go refreshBootstrapDNSLoop()
 	mux.HandleFunc("/bootstrap-dns", handleBootstrapDNS)
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -321,6 +322,11 @@ func probeHandler(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "bogus probe method", http.StatusMethodNotAllowed)
 	}
+}
+
+// generate204Handler is used to serve a 204 response for captive portal detection
+func generate204Handler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func serveSTUN(host string, port int) {
