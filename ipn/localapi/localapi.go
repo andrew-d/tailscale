@@ -212,6 +212,9 @@ func (h *Handler) serveBugReport(w http.ResponseWriter, r *http.Request) {
 	if note := r.FormValue("note"); len(note) > 0 {
 		h.logf("user bugreport note: %s", note)
 	}
+	if defBool(r.FormValue("doctor"), false) {
+		h.b.Doctor(r.Context(), logger.WithPrefix(h.logf, "doctor: "))
+	}
 	w.Header().Set("Content-Type", "text/plain")
 	fmt.Fprintln(w, logMarker)
 }
