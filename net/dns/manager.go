@@ -120,6 +120,11 @@ func (m *Manager) Set(cfg Config) error {
 		return err
 	}
 
+	if err := m.checkConfig(rcfg, ocfg); err != nil {
+		// TODO: set health?
+		m.logf("checkConfig: %v", err)
+	}
+
 	m.logf("Resolvercfg: %v", logger.ArgWriter(func(w *bufio.Writer) {
 		rcfg.WriteToBufioWriter(w)
 	}))
@@ -234,6 +239,25 @@ func (m *Manager) compileConfig(cfg Config) (rcfg resolver.Config, ocfg OSConfig
 	}
 
 	return rcfg, ocfg, nil
+}
+
+func (m *Manager) checkConfig(rcfg resolver.Config, ocfg OSConfig) error {
+	// Check for the case where someone sets global DNS server(s) that use
+	// the CGNAT range.
+	// NOTE: should we catch/prevent this in the admin interface?
+	if global, ok := rcfg.Routes["."]; ok {
+		for _, r := range global {
+			ipp, ok := r.IPPort()
+			if !ok {
+				continue
+			}
+			if tsaddr.CGNATRange().Contains(ipp.Addr()) {
+				m.logf("checkConfig: global DNS server is in CGNAT range: %v", ipp)
+			}
+		}
+	}
+
+	return nil
 }
 
 // toIPsOnly returns only the IP portion of dnstype.Resolver.
