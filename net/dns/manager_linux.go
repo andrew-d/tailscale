@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/netip"
 	"os"
 	"time"
 
@@ -238,6 +239,30 @@ func dnsMode(logf logger.Logf, env newOSConfigEnv) (ret string, err error) {
 		return "systemd-resolved", nil
 	default:
 		dbg("rc", "unknown")
+
+		// If resolv.conf looks managed by tailscale, we assume
+		// everything is fine and we don't need to check further.
+		if bytes.Contains(bs, []byte(directOwnedString)) {
+			return "direct", nil
+		}
+
+		// Sometimes we can end up in a situation where we have a bare
+		// /etc/resolv.conf which only contains Tailscale's nameserver
+		// ("100.100.100.100"). We're going to continue in this case,
+		// but log a message saying that something is likely wrong.
+		//
+		cfg, err := readResolv(bytes.NewBuffer(bs))
+		if err != nil {
+			logf("logf: readResolv error: %v", err)
+			return "direct", nil
+		}
+		if cfg.Equal(OSConfig{
+			Nameservers: []netip.Addr{netip.MustParseAddr("100.100.100.100")},
+		}) {
+			dbg("rc-recursive", "yes")
+			// TODO(andrew): after we gather some data, decide whether to call SetDNSManagerHealth
+		}
+
 		return "direct", nil
 	}
 }

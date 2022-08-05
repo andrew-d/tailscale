@@ -118,6 +118,14 @@ func TestLinuxDNSMode(t *testing.T) {
 			wantLog: "dns: [resolved-ping=yes rc=resolved nm=yes nm-resolved=yes nm-safe=no ret=systemd-resolved]",
 			want:    "systemd-resolved",
 		},
+		{
+			name: "resolv_conf_points_to_tailscale",
+			env: env(
+				resolvDotConf("nameserver 100.100.100.100"),
+			),
+			wantLog: "dns: [rc=unknown rc-recursive=yes ret=direct]",
+			want:    "direct",
+		},
 		// Regression tests for extreme corner cases below.
 		{
 			// One user reported a configuration whose comment string
