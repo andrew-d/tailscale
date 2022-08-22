@@ -279,12 +279,12 @@ func (lc *LocalClient) BugReport(ctx context.Context, note string, diagnose bool
 
 // DebugAction invokes a debug action, such as "rebind" or "restun".
 // These are development tools and subject to change or removal over time.
-func (lc *LocalClient) DebugAction(ctx context.Context, action string) error {
+func (lc *LocalClient) DebugAction(ctx context.Context, action string) ([]byte, error) {
 	body, err := lc.send(ctx, "POST", "/localapi/v0/debug?action="+url.QueryEscape(action), 200, nil)
 	if err != nil {
-		return fmt.Errorf("error %w: %s", err, body)
+		return nil, fmt.Errorf("error %w: %s", err, body)
 	}
-	return nil
+	return body, nil
 }
 
 // Status returns the Tailscale daemon's status.

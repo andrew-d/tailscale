@@ -134,6 +134,11 @@ var debugCmd = &ffcli.Command{
 				return fs
 			})(),
 		},
+		{
+			Name:      "dump",
+			Exec:      runDebugDiagnose,
+			ShortHelp: "print output of 'diagnose' checks that are run during tailscale bugreport",
+		},
 	},
 }
 
@@ -293,7 +298,8 @@ func localAPIAction(action string) func(context.Context, []string) error {
 		if len(args) > 0 {
 			return errors.New("unexpected arguments")
 		}
-		return localClient.DebugAction(ctx, action)
+		_, err := localClient.DebugAction(ctx, action)
+		return err
 	}
 }
 
@@ -504,4 +510,14 @@ func runTS2021(ctx context.Context, args []string) error {
 
 	log.Printf("final underlying conn: %v / %v", conn.LocalAddr(), conn.RemoteAddr())
 	return nil
+}
+
+func runDebugDiagnose(ctx context.Context, args []string) error {
+	body, err := localClient.DebugAction(ctx, "diagnose")
+	if err != nil {
+		return fmt.Errorf("error %w: %s", err, body)
+	}
+
+	_, err = Stdout.Write(body)
+	return err
 }

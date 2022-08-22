@@ -290,8 +290,13 @@ func (h *Handler) serveDebug(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	action := r.FormValue("action")
-	var err error
+	var (
+		body []byte
+		err  error
+	)
 	switch action {
+	case "diagnose":
+		body, err = h.b.DebugDiagnose(r.Context())
 	case "rebind":
 		err = h.b.DebugRebind()
 	case "restun":
@@ -306,7 +311,11 @@ func (h *Handler) serveDebug(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/plain")
-	io.WriteString(w, "done\n")
+	if body != nil {
+		w.Write(body)
+	} else {
+		io.WriteString(w, "done\n")
+	}
 }
 
 // serveProfileFunc is the implementation of Handler.serveProfile, after auth,

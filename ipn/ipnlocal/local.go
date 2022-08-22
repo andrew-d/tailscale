@@ -3540,6 +3540,23 @@ func (b *LocalBackend) DebugReSTUN() error {
 	return nil
 }
 
+func (b *LocalBackend) DebugDiagnose(ctx context.Context) ([]byte, error) {
+	var (
+		ret []byte
+		mu  sync.Mutex
+	)
+	logf := func(format string, args ...any) {
+		mu.Lock()
+		defer mu.Unlock()
+		ret = fmt.Appendf(ret, format, args...)
+		if ret[len(ret)-1] != '\n' {
+			ret = append(ret, '\n')
+		}
+	}
+	b.Doctor(ctx, logf)
+	return ret, nil
+}
+
 func (b *LocalBackend) magicConn() (*magicsock.Conn, error) {
 	ig, ok := b.e.(wgengine.InternalsGetter)
 	if !ok {
