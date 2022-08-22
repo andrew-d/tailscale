@@ -470,6 +470,35 @@ func (n *fakeNetfilter) DeleteChain(table, chain string) error {
 	}
 }
 
+func (n *fakeNetfilter) ListChains(table string) ([]string, error) {
+	var (
+		ret  []string
+		seen = make(map[string]bool)
+	)
+	for k, _ := range n.n {
+		tb, chain, ok := strings.Cut(k, "/")
+		if !ok {
+			continue
+		}
+		if table == tb && !seen[chain] {
+			ret = append(ret, chain)
+			seen[chain] = true
+		}
+	}
+
+	return ret, nil
+}
+
+func (n *fakeNetfilter) List(table, chain string) ([]string, error) {
+	k := table + "/" + chain
+	if rules, ok := n.n[k]; ok {
+		return append([]string(nil), rules...)
+	} else {
+		n.t.Errorf("%s does not exist", k)
+		return errExec
+	}
+}
+
 // fakeOS implements commandRunner and provides v4 and v6
 // netfilterRunners, but captures changes without touching the OS.
 type fakeOS struct {

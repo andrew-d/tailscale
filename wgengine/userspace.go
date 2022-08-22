@@ -23,6 +23,7 @@ import (
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/tun"
 	"tailscale.com/control/controlclient"
+	"tailscale.com/doctor"
 	"tailscale.com/envknob"
 	"tailscale.com/health"
 	"tailscale.com/ipn/ipnstate"
@@ -166,6 +167,11 @@ type ResolvingEngine interface {
 var (
 	_ ResolvingEngine = (*userspaceEngine)(nil)
 	_ ResolvingEngine = (*watchdogEngine)(nil)
+)
+
+var (
+	_ doctor.CheckProvider = (*userspaceEngine)(nil)
+	_ doctor.CheckProvider = (*watchdogEngine)(nil)
 )
 
 func (e *userspaceEngine) GetResolver() (r *resolver.Resolver, ok bool) {
@@ -1562,6 +1568,13 @@ func (e *userspaceEngine) PeerForIP(ip netip.Addr) (ret PeerForIP, ok bool) {
 		}
 	}
 	return ret, false
+}
+
+func (e *userspaceEngine) DoctorChecks() (ret []doctor.Check) {
+	if iif, ok := e.router.(doctor.CheckProvider); ok {
+		ret = append(ret, iif.DoctorChecks()...)
+	}
+	return
 }
 
 type closeOnErrorPool []func()

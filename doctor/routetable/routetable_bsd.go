@@ -63,6 +63,8 @@ func (re routeEntry) String() string {
 	return sb.String()
 }
 
+// ipFromRMAddr returns a netip.Addr converted from one of the
+// route.Inet{4,6}Addr types.
 func ipFromRMAddr(ifs map[int]interfaces.Interface, addr any) netip.Addr {
 	switch v := addr.(type) {
 	case *route.Inet4Addr:
@@ -84,6 +86,8 @@ func ipFromRMAddr(ifs map[int]interfaces.Interface, addr any) netip.Addr {
 	return netip.Addr{}
 }
 
+// populateGateway populates the GatewayAddr and optionally GatewayIdx and
+// GatewayIf fields on a routeEntry.
 func populateGateway(re *routeEntry, ifs map[int]interfaces.Interface, addr any) {
 	re.GatewayAddr = "invalid" // default
 
@@ -116,6 +120,8 @@ func populateGateway(re *routeEntry, ifs map[int]interfaces.Interface, addr any)
 	}
 }
 
+// populateDestination populates the 'Dst' field on a routeEntry based on the
+// RouteMessage's destination and netmask fields.
 func populateDestination(re *routeEntry, ifs map[int]interfaces.Interface, rm *route.RouteMessage) {
 	// Default destination is "invalid" if we don't parse further
 	re.Dst = "invalid"
@@ -182,6 +188,8 @@ func populateDestination(re *routeEntry, ifs map[int]interfaces.Interface, rm *r
 	re.Dst = ip.String() + "/" + strconv.Itoa(ones)
 }
 
+// routeEntryFromMsg returns a routeEntryFromMsg from a single route.Message
+// returned by the operating system.
 func routeEntryFromMsg(ifsByIdx map[int]interfaces.Interface, msg route.Message) (routeEntry, bool) {
 	rm, ok := msg.(*route.RouteMessage)
 	if !ok {
@@ -223,7 +231,9 @@ func routeEntryFromMsg(ifsByIdx map[int]interfaces.Interface, msg route.Message)
 	return re, true
 }
 
-func getRouteTable() ([]routeEntry, error) {
+// getRouteTable returns route entries from the system route table, limited to
+// at most 'max' results.
+func getRouteTable(max int) ([]routeEntry, error) {
 	// Fetching the list of interfaces can race with fetching our route
 	// table, but we do it anyway since it's helpful for debugging.
 	ifs, err := interfaces.GetList()
@@ -250,6 +260,9 @@ func getRouteTable() ([]routeEntry, error) {
 		re, ok := routeEntryFromMsg(ifsByIdx, m)
 		if ok {
 			ret = append(ret, re)
+			if len(ret) == max {
+				break
+			}
 		}
 	}
 	return ret, nil

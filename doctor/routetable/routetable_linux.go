@@ -66,6 +66,7 @@ func (re routeEntry) String() string {
 	return sb.String()
 }
 
+// typeName returns the string representation of a given route type
 func typeName(t int) string {
 	switch t {
 	case unix.RTN_UNSPEC:
@@ -97,6 +98,7 @@ func typeName(t int) string {
 	}
 }
 
+// tableName returns the string representation of a route table
 func tableName(t int) string {
 	switch t {
 	case unix.RT_TABLE_DEFAULT:
@@ -110,7 +112,9 @@ func tableName(t int) string {
 	}
 }
 
-func getRouteTable() ([]routeEntry, error) {
+// getRouteTable returns route entries from the system route table, limited to
+// at most 'max' results.
+func getRouteTable(max int) ([]routeEntry, error) {
 	// Fetching the list of interfaces can race with fetching our route
 	// table, but we do it anyway since it's helpful for debugging.
 	ifs, err := interfaces.GetList()
@@ -161,7 +165,13 @@ func getRouteTable() ([]routeEntry, error) {
 		if outif, ok := ifsByIdx[route.LinkIndex]; ok {
 			re.Device = outif.Name
 		}
+
 		ret = append(ret, re)
+
+		// Stop after we've reached the maximum number of routes
+		if len(ret) == max {
+			break
+		}
 	}
 	return ret, nil
 }

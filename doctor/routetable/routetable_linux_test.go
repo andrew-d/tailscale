@@ -15,7 +15,7 @@ import (
 )
 
 func TestGetRouteTable(t *testing.T) {
-	routes, err := getRouteTable()
+	routes, err := getRouteTable(MaxRoutes)
 	if err != nil {
 		t.Fatal(err)
 	}

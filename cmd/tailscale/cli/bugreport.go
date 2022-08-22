@@ -18,14 +18,14 @@ var bugReportCmd = &ffcli.Command{
 	ShortHelp:  "Print a shareable identifier to help diagnose issues",
 	ShortUsage: "bugreport [note]",
 	FlagSet: (func() *flag.FlagSet {
-		fs := newFlagSet("doctor")
-		fs.BoolVar(&bugReportArgs.doctor, "doctor", false, "run additional in-depth checks")
+		fs := newFlagSet("bugreport")
+		fs.BoolVar(&bugReportArgs.diagnose, "diagnose", false, "run additional in-depth checks")
 		return fs
 	})(),
 }
 
 var bugReportArgs struct {
-	doctor bool
+	diagnose bool
 }
 
 func runBugReport(ctx context.Context, args []string) error {
@@ -37,7 +37,7 @@ func runBugReport(ctx context.Context, args []string) error {
 	default:
 		return errors.New("unknown argumets")
 	}
-	logMarker, err := localClient.BugReport(ctx, note, bugReportArgs.doctor)
+	logMarker, err := localClient.BugReport(ctx, note, bugReportArgs.diagnose)
 	if err != nil {
 		return err
 	}

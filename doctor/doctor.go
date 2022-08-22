@@ -74,3 +74,11 @@ type checkFunc struct {
 
 func (c checkFunc) Name() string                                   { return c.name }
 func (c checkFunc) Run(ctx context.Context, log logger.Logf) error { return c.run(ctx, log) }
+
+// CheckProvider is an interface by things that can provide a set of
+// checks to be run.
+type CheckProvider interface {
+	// DoctorChecks should return 0 or more checks to be run
+	// through the 'doctor.RunChecks' function.
+	DoctorChecks() []Check
+}

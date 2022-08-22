@@ -6,6 +6,7 @@ package router
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -24,6 +25,7 @@ import (
 	"golang.org/x/sys/unix"
 	"golang.org/x/time/rate"
 	"golang.zx2c4.com/wireguard/tun"
+	"tailscale.com/doctor"
 	"tailscale.com/envknob"
 	"tailscale.com/net/tsaddr"
 	"tailscale.com/types/logger"
@@ -81,6 +83,8 @@ type netfilterRunner interface {
 	ClearChain(table, chain string) error
 	NewChain(table, chain string) error
 	DeleteChain(table, chain string) error
+	ListChains(table string) ([]string, error)
+	List(table, chain string) ([]string, error)
 }
 
 type linuxRouter struct {
@@ -1372,6 +1376,52 @@ func (r *linuxRouter) delSNATRule() error {
 		}
 	}
 	return nil
+}
+
+func listRules(nf netfilterRunner, prefix, table string, log logger.Logf) {
+	chains, err := nf.ListChains(table)
+	if err != nil {
+		log("%s: error: could not get chains for table %q: %v", prefix, table, err)
+		return
+	}
+	for _, chain := range chains {
+		rules, err := nf.List(table, chain)
+		if err != nil {
+			log("%s: error: could not get rules in chain %q of table %q: %v", prefix, chain, table, err)
+			continue
+		}
+
+		for i, rule := range rules {
+			log("%s: table=%s chain=%s idx=%d rule=%q", prefix, table, chain, i, rule)
+		}
+	}
+}
+
+func (r *linuxRouter) DoctorChecks() []doctor.Check {
+	tables := []string{"filter", "nat", "mangle", "raw", "security"}
+
+	ret := []doctor.Check{
+		doctor.CheckFunc("ipv4-firewall", func(ctx context.Context, log logger.Logf) error {
+			for _, table := range tables {
+				listRules(r.ipt4, "IPv4", table, log)
+			}
+			return nil
+		}),
+	}
+	if r.v6Available {
+		ret = append(ret, doctor.CheckFunc("ipv6-firewall", func(ctx context.Context, log logger.Logf) error {
+			for _, table := range tables {
+				listRules(r.ipt6, "IPv6", table, log)
+			}
+			return nil
+		}))
+	} else {
+		ret = append(ret, doctor.CheckFunc("ipv6-firewall", func(ctx context.Context, log logger.Logf) error {
+			log("IPv6: not available")
+			return nil
+		}))
+	}
+	return ret
 }
 
 // cidrDiff calls add and del as needed to make the set of prefixes in

@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"tailscale.com/doctor"
 	"tailscale.com/envknob"
 	"tailscale.com/ipn/ipnstate"
 	"tailscale.com/net/dns"
@@ -151,6 +152,12 @@ func (e *watchdogEngine) GetResolver() (r *resolver.Resolver, ok bool) {
 func (e *watchdogEngine) PeerForIP(ip netip.Addr) (ret PeerForIP, ok bool) {
 	e.watchdog("PeerForIP", func() { ret, ok = e.wrap.PeerForIP(ip) })
 	return ret, ok
+}
+func (e *watchdogEngine) DoctorChecks() (ret []doctor.Check) {
+	if iif, ok := e.wrap.(doctor.CheckProvider); ok {
+		e.watchdog("DoctorChecks", func() { ret = iif.DoctorChecks() })
+	}
+	return ret
 }
 
 func (e *watchdogEngine) Wait() {

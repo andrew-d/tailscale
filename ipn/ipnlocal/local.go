@@ -3628,6 +3628,10 @@ func (b *LocalBackend) Doctor(ctx context.Context, logf logger.Logf) {
 
 	checks = append(checks, routetable.Check{})
 
+	if iif, ok := b.e.(doctor.CheckProvider); ok {
+		checks = append(checks, iif.DoctorChecks()...)
+	}
+
 	// TODO(andrew): more
 
 	numChecks := len(checks)

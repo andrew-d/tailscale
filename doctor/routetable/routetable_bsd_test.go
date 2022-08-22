@@ -376,3 +376,23 @@ func TestRouteEntryFormatting(t *testing.T) {
 		})
 	}
 }
+
+func TestGetRouteTable(t *testing.T) {
+	routes, err := getRouteTable(MaxRoutes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Basic assertion: we have at least one 'default' route
+	var (
+		hasDefault bool
+	)
+	for _, route := range routes {
+		if route.Dst == "default" {
+			hasDefault = true
+		}
+	}
+	if !hasDefault {
+		t.Errorf("expected at least one default route; routes=%v", routes)
+	}
+}
