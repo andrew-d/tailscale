@@ -24,6 +24,7 @@ require (
 	github.com/godbus/dbus/v5 v5.0.6
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
 	github.com/google/go-cmp v0.5.8
+	github.com/google/nftables v0.0.0-20220808154552-2eca00135732
 	github.com/google/uuid v1.3.0
 	github.com/goreleaser/nfpm v1.10.3
 	github.com/hdevalence/ed25519consensus v0.0.0-20220222234857-c00d1f31bab3
