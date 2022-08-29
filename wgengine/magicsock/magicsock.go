@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"go4.org/mem"
+	"golang.org/x/sys/unix"
 	"golang.zx2c4.com/wireguard/conn"
 	"tailscale.com/control/controlclient"
 	"tailscale.com/derp"
@@ -253,6 +254,11 @@ type Conn struct {
 	// protocols.
 	pconn4 *RebindingUDPConn
 	pconn6 *RebindingUDPConn
+
+	// bpfConn4 and bpfConn6 are file descriptors representing AF_PACKET
+	// sockets that are used to receive disco packets
+	bpfConn4 int
+	bpfConn6 int
 
 	// netChecker is the prober that discovers local network
 	// conditions, including the closest DERP relay and NAT mappings.
@@ -571,6 +577,8 @@ func NewConn(opts Options) (*Conn, error) {
 	}
 
 	c.ignoreSTUNPackets()
+
+	c.listenDisco()
 
 	return c, nil
 }
@@ -2632,6 +2640,12 @@ func (c *connBind) Close() error {
 	if c.pconn6 != nil {
 		c.pconn6.Close()
 	}
+	if c.bpfConn4 != 0 {
+		unix.Close(c.bpfConn4)
+	}
+	if c.bpfConn6 != 0 {
+		unix.Close(c.bpfConn6)
+	}
 	// Send an empty read result to unblock receiveDERP,
 	// which will then check connBind.Closed.
 	// connBind.Closed takes c.mu, but c.derpRecvCh is buffered.
@@ -4192,4 +4206,10 @@ var (
 	// metricDERPHomeChange is how many times our DERP home region DI has
 	// changed from non-zero to a different non-zero.
 	metricDERPHomeChange = clientmetric.NewCounter("derp_home_change")
+
+	// Disco packets received through AF_PACKET read path
+	metricRecvDiscoPacketIPv4        = clientmetric.NewCounter("magicsock_disco_recv_packet_ipv4")
+	metricRecvDiscoPacketInvalidIPv4 = clientmetric.NewCounter("magicsock_disco_recv_packet_invalid_ipv4")
+	metricRecvDiscoPacketIPv6        = clientmetric.NewCounter("magicsock_disco_recv_packet_ipv6")
+	metricRecvDiscoPacketInvalidIPv6 = clientmetric.NewCounter("magicsock_disco_recv_packet_invalid_ipv6")
 )
