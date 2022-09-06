@@ -37,7 +37,7 @@ func TestHostinfoEqual(t *testing.T) {
 		"GoArch", "GoVersion",
 		"RoutableIPs", "RequestTags",
 		"Services", "NetInfo", "SSH_HostKeys", "Cloud",
-		"Userspace", "UserspaceRouter",
+		"Userspace", "UserspaceRouter", "LinuxFW",
 	}
 	if have := fieldsOf(reflect.TypeOf(Hostinfo{})); !reflect.DeepEqual(have, hiHandles) {
 		t.Errorf("Hostinfo.Equal check might be out of sync\nfields: %q\nhandled: %q\n",
@@ -189,6 +189,11 @@ func TestHostinfoEqual(t *testing.T) {
 		{
 			&Hostinfo{SSH_HostKeys: []string{"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO.... root@bar"}},
 			&Hostinfo{},
+			false,
+		},
+		{
+			&Hostinfo{LinuxFW: &LinuxFW{IPT: LinuxFWTypeInfo{NumRules: 0}}},
+			&Hostinfo{LinuxFW: &LinuxFW{IPT: LinuxFWTypeInfo{NumRules: 1}}},
 			false,
 		},
 	}

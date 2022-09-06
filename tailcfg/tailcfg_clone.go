@@ -110,6 +110,10 @@ func (src *Hostinfo) Clone() *Hostinfo {
 	dst.Services = append(src.Services[:0:0], src.Services...)
 	dst.NetInfo = src.NetInfo.Clone()
 	dst.SSH_HostKeys = append(src.SSH_HostKeys[:0:0], src.SSH_HostKeys...)
+	if dst.LinuxFW != nil {
+		dst.LinuxFW = new(LinuxFW)
+		*dst.LinuxFW = *src.LinuxFW
+	}
 	return dst
 }
 
@@ -136,6 +140,7 @@ var _HostinfoCloneNeedsRegeneration = Hostinfo(struct {
 	Cloud           string
 	Userspace       opt.Bool
 	UserspaceRouter opt.Bool
+	LinuxFW         *LinuxFW
 }{})
 
 // Clone makes a deep copy of NetInfo.

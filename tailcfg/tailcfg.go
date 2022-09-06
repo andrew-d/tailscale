@@ -488,6 +488,8 @@ type Hostinfo struct {
 	Userspace       opt.Bool       `json:",omitempty"` // if the client is running in userspace (netstack) mode
 	UserspaceRouter opt.Bool       `json:",omitempty"` // if the client's subnet router is running in userspace (netstack) mode
 
+	LinuxFW *LinuxFW `json:",omitempty"` // Linux firewall information; not populated on other OSes
+
 	// NOTE: any new fields containing pointers in this type
 	//       require changes to Hostinfo.Equal.
 }
@@ -696,6 +698,45 @@ func appendStructPtrDiff(base []string, pfx string, p1, p2 reflect.Value) (ret [
 		panic(fmt.Sprintf("unsupported type at %s: %s", mkPath(sf.Name), sf.Type.String()))
 	}
 	return ret
+}
+
+// LinuxFW contains information about the firewall on Linux systems.
+type LinuxFW struct {
+	// Information about iptables.
+	IPT LinuxFWTypeInfo
+	// Information about nftables.
+	NFT LinuxFWTypeInfo
+	// Information about binaries related to the Linux firewall.
+	BinInfo map[string]LinuxFWBinInfo
+}
+
+// LinuxFWTypeInfo contains information about querying iptables/nftables status.
+type LinuxFWTypeInfo struct {
+	// NumRules contains the number of rules loaded into the kernel for
+	// this firewall type.
+	NumRules int
+	// SyscallError is the error code returned from the kernel when trying
+	// to query information about this firewall type.
+	SyscallError int `json:",omitempty"`
+	// OtherError contains non-syscall errors that were encountered when
+	// trying to query information about this firewall type.
+	OtherError string `json:",omitempty"`
+}
+
+// LinuxFWBinInfo contains infromation about a specific binary related to the
+// Linux firewall (e.g. "iptables", "iptables-legacy", etc.).
+type LinuxFWBinInfo struct {
+	// Present is whether the binary is present on the system or not.
+	Present bool
+	// Version is the version string of the binary, if running it with
+	// `--version` succeeded.
+	Version string `json:",omitempty"`
+	// Error is the error encountered while trying to execute the binary to
+	// determine its version.
+	Error string `json:",omitempty"`
+	// Flavor is whether we were able to detect a "flavor" of the binary;
+	// this is only set for the "iptables" and "ip6tables" binaries.
+	Flavor string `json:",omitempty"`
 }
 
 // SignatureType specifies a scheme for signing RegisterRequest messages. It

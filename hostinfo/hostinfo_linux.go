@@ -9,13 +9,19 @@ package hostinfo
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
+	"regexp"
 	"strings"
+	"syscall"
 
 	"golang.org/x/sys/unix"
+	"tailscale.com/tailcfg"
 	"tailscale.com/util/lineread"
+	"tailscale.com/util/linuxfw"
 	"tailscale.com/util/strs"
 	"tailscale.com/version/distro"
 )
@@ -27,6 +33,7 @@ func init() {
 	if v := linuxDeviceModel(); v != "" {
 		SetDeviceModel(v)
 	}
+	linuxFWFill = linuxFW
 }
 
 func linuxDeviceModel() string {
@@ -140,4 +147,73 @@ func packageTypeLinux() string {
 		return "snap"
 	}
 	return ""
+}
+
+func linuxFW() *tailcfg.LinuxFW {
+	ret := &tailcfg.LinuxFW{
+		BinInfo: make(map[string]tailcfg.LinuxFWBinInfo),
+	}
+
+	n, err := linuxfw.DetectIptables()
+	detectFwType(&ret.IPT, n, err)
+
+	n, err = linuxfw.DetectNetfilter()
+	detectFwType(&ret.NFT, n, err)
+
+	// Try to find an iptables binary on-disk
+	for _, bin := range []string{"iptables", "ip6tables", "iptables-legacy", "iptables-nft", "nft"} {
+		ret.BinInfo[bin] = detectBinary(bin)
+	}
+	return ret
+}
+
+func detectFwType(ty *tailcfg.LinuxFWTypeInfo, n int, err error) {
+	ty.NumRules = n
+	if err == nil {
+		return
+	}
+
+	var sysErr syscall.Errno
+	if errors.As(err, &sysErr) {
+		ty.SyscallError = int(sysErr)
+	} else {
+		ty.OtherError = err.Error()
+	}
+}
+
+// e.g. "v1.2.3 (nf_tables)"
+var versionMatcher = regexp.MustCompile(`v([0-9]+)\.([0-9]+)\.([0-9]+)(?:\s+\((\w+))?`)
+
+func detectBinary(name string) (ret tailcfg.LinuxFWBinInfo) {
+	path, err := exec.LookPath(name)
+	if err != nil {
+		return
+	}
+
+	cmd := exec.Command(path, "--version")
+
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	if err := cmd.Run(); err != nil {
+		ret.Error = err.Error()
+		return
+	}
+
+	// If we could run the binary, we count it as "present"
+	ret.Present = true
+	ret.Version = strings.TrimSuffix(out.String(), "\n")
+	if len(ret.Version) > 64 {
+		ret.Version = ret.Version[:64]
+	}
+
+	// Attempt to get the flavour for iptables/ip6tables (since we know
+	// that they include this information in their version string).
+	if name == "iptables" || name == "ip6tables" {
+		result := versionMatcher.FindStringSubmatch(ret.Version)
+		if result == nil {
+			return
+		}
+		ret.Flavor = result[4]
+	}
+	return
 }

@@ -273,7 +273,15 @@ func (v HostinfoView) SSH_HostKeys() views.Slice[string] { return views.SliceOf(
 func (v HostinfoView) Cloud() string                     { return v.ж.Cloud }
 func (v HostinfoView) Userspace() opt.Bool               { return v.ж.Userspace }
 func (v HostinfoView) UserspaceRouter() opt.Bool         { return v.ж.UserspaceRouter }
-func (v HostinfoView) Equal(v2 HostinfoView) bool        { return v.ж.Equal(v2.ж) }
+func (v HostinfoView) LinuxFW() *LinuxFW {
+	if v.ж.LinuxFW == nil {
+		return nil
+	}
+	x := *v.ж.LinuxFW
+	return &x
+}
+
+func (v HostinfoView) Equal(v2 HostinfoView) bool { return v.ж.Equal(v2.ж) }
 
 // A compilation failure here means this code must be regenerated, with the command at the top of this file.
 var _HostinfoViewNeedsRegeneration = Hostinfo(struct {
@@ -298,6 +306,7 @@ var _HostinfoViewNeedsRegeneration = Hostinfo(struct {
 	Cloud           string
 	Userspace       opt.Bool
 	UserspaceRouter opt.Bool
+	LinuxFW         *LinuxFW
 }{})
 
 // View returns a readonly view of NetInfo.

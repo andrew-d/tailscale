@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"go4.org/mem"
+	"tailscale.com/syncs"
 	"tailscale.com/tailcfg"
 	"tailscale.com/types/opt"
 	"tailscale.com/util/cloudenv"
@@ -30,6 +31,7 @@ var started = time.Now()
 func New() *tailcfg.Hostinfo {
 	hostname, _ := os.Hostname()
 	hostname = dnsname.FirstLabel(hostname)
+
 	return &tailcfg.Hostinfo{
 		IPNVersion:  version.Long,
 		Hostname:    hostname,
@@ -41,6 +43,7 @@ func New() *tailcfg.Hostinfo {
 		GoVersion:   runtime.Version(),
 		DeviceModel: deviceModel(),
 		Cloud:       string(cloudenv.Get()),
+		LinuxFW:     getLinuxFW(),
 	}
 }
 
@@ -48,6 +51,7 @@ func New() *tailcfg.Hostinfo {
 var (
 	osVersion   func() string
 	packageType func() string
+	linuxFWFill func() *tailcfg.LinuxFW
 )
 
 // GetOSVersion returns the OSVersion of current host if available.
@@ -71,6 +75,22 @@ func packageTypeCached() string {
 	v := packageType()
 	if v != "" {
 		SetPackage(v)
+	}
+	return v
+}
+
+var linuxFWCache syncs.AtomicValue[*tailcfg.LinuxFW]
+
+func getLinuxFW() *tailcfg.LinuxFW {
+	if v := linuxFWCache.Load(); v != nil {
+		return v
+	}
+	if linuxFWFill == nil {
+		return nil
+	}
+	v := linuxFWFill()
+	if v != nil {
+		linuxFWCache.Store(v)
 	}
 	return v
 }

@@ -98,7 +98,10 @@ func DebugIptables(logf logger.Logf) error {
 func DetectIptables() (int, error) {
 	dummyLog := func(string, ...any) {}
 
-	var validRules int
+	var (
+		validRules int
+		firstErr   error
+	)
 	for _, table := range []string{"filter", "nat", "raw"} {
 		err := enumerateIptablesTable(dummyLog, table, func(chain string, entry *entry) error {
 			// If we have any rules other than basic 'ACCEPT' entries in a
@@ -113,12 +116,12 @@ func DetectIptables() (int, error) {
 			}
 			return nil
 		})
-		if err != nil {
-			// TODO(andrew): skip? print? ignore?
+		if err != nil && firstErr == nil {
+			firstErr = err
 		}
 	}
 
-	return validRules, nil
+	return validRules, firstErr
 }
 
 func enumerateIptablesTable(logf logger.Logf, table string, cb func(string, *entry) error) error {
